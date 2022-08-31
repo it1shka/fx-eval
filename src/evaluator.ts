@@ -55,8 +55,15 @@ export default class Evaluator {
   private scope = new VariableManager()
 
   constructor( 
-    private readonly builtinFuncs: TypedContainer<BuiltinFunc>
-  ){}
+    private readonly builtinFuncs: TypedContainer<BuiltinFunc>,
+    defaultConstants?: TypedContainer<number>
+  ){
+    if(defaultConstants !== undefined) {
+      for(const [key, val] of Object.entries(defaultConstants)) {
+        this.scope.setConstant(key, val)
+      }
+    }
+  }
 
   private evaluateLetStatement(statement: LetStatement) {
     throw new Error('not implemented yet')
@@ -142,14 +149,26 @@ export function DefaultEvaluator() {
     'randint': (min, max) => {
       return min + Math.floor(Math.random() * (max - min))
     },
+
     'min': (a, b) => Math.min(a, b),
     'max': (a, b) => Math.max(a, b),
+
     'ln': a => Math.log(a),
     'lg': a => Math.log10(a),
+    
     'round': a => Math.round(a),
     'floor': a => Math.floor(a),
     'ceil': a => Math.ceil(a),
     'trunc': a => Math.trunc(a),
+
+    'sin': a => Math.sin(a),
+    'cos': a => Math.cos(a),
+    'tg': a => Math.tan(a),
+
+    'deg': a => a * Math.PI / 180
+  }, {
+    'E': Math.E,
+    'PI': Math.PI
   })
-  
+
 }
