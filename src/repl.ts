@@ -20,7 +20,10 @@ export async function launchRepl() {
     try {
       const userInput = await askInput('> ')
       const result = evaluator.feedSingleStatement(userInput)
-      console.log(chalk.yellow(result))
+      const color = typeof result === 'number'
+        ? chalk.yellow
+        : chalk.blueBright
+      console.log(color(result))
     } catch(error) {
       console.log(chalk.red(error))
     }

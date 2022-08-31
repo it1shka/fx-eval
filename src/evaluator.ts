@@ -1,6 +1,6 @@
-import { BinaryOperation, ConstStatement, Expression, FunctionCall, LetStatement, Statement, UnaryOperation } from "./ast"
+import { BinaryOperation, ConstStatement, Expression, FunctionCall, JustNumber, LetStatement, Statement, UnaryOperation, Variable } from "./ast"
 import Parser from "./parser"
-import { ShortError, extractMessage } from "./utils"
+import { ShortError, extractMessage, zipped } from "./utils"
 
 type TypedContainer<T> = {[key: string]: T}
 
@@ -50,9 +50,16 @@ class VariableManager {
 
 type BuiltinFunc = (...args: number[]) => number
 
+type UserFunc = Array<UserFuncCase>
+interface UserFuncCase {
+  fcase: Array<number | string>,
+  clause: Expression
+}
+
 export default class Evaluator {
   private nth = 1
   private scope = new VariableManager()
+  private userfuncs: TypedContainer<UserFunc> = {}
 
   constructor( 
     private readonly builtinFuncs: TypedContainer<BuiltinFunc>,
@@ -65,8 +72,19 @@ export default class Evaluator {
     }
   }
 
-  private evaluateLetStatement(statement: LetStatement) {
-    throw new Error('not implemented yet')
+  private evaluateLetStatement({funcname, params, body}: LetStatement) {
+    if(!this.userfuncs[funcname]) this.userfuncs[funcname] = []
+
+    const fcase = params.map(param => {
+      if(param.ntype === 'variable') return param.varname
+      return this.evaluateExpression(param)
+    })
+
+    this.userfuncs[funcname].push({
+      fcase, clause: body
+    })
+
+    return `<func ${funcname}(${fcase.map(String).join(', ')}) = ...>`
   }
 
   private evaluateConstStatement(statement: ConstStatement) {
@@ -90,8 +108,45 @@ export default class Evaluator {
     return op(val)
   }
 
+  private callUserfunc(funcname: string, args: number[]): number {
+    const fcases = this.userfuncs[funcname]
+
+    for(const {fcase, clause} of fcases) {
+      if(fcase.length !== args.length) continue
+
+      const funcscope: Scope = {}
+      let matched = true
+
+      for(const [val, matching] of zipped(args, fcase)) {
+        if(typeof matching === 'number') {
+          if(val !== matching) {
+            matched = false
+            break
+          }
+        } else {
+          funcscope[matching] = val
+        }
+      }
+
+      if(!matched) continue
+      
+      this.scope.enterScope(funcscope)
+      const result = this.evaluateExpression(clause)
+      this.scope.leaveScope()
+      return result
+    }
+
+    const strfunc = `${funcname}(${args.map(String).join(', ')})`
+
+    throw new ShortError(`
+      no matching clause was found
+      for function call ${strfunc}
+    `)
+  }
+
   private callFunction({funcname, args}: FunctionCall): number {
     const valargs = args.map(arg => this.evaluateExpression(arg))
+
     if(this.builtinFuncs[funcname]) {
       const func = this.builtinFuncs[funcname]
       if(func.length !== valargs.length) {
@@ -104,7 +159,11 @@ export default class Evaluator {
       return func(...valargs)
     }
 
-    throw new Error('not implemented yet')
+    if(this.userfuncs[funcname]) {
+      return this.callUserfunc(funcname, valargs)
+    }
+
+    throw new Error(`undefined function ${funcname}!`)
   }
 
   private evaluateExpression(expression: Expression): number {

@@ -18,3 +18,11 @@ export function extractMessage(error: unknown) {
   }
   return 'Unknown error'
 }
+
+export function zipped<A, B>(first: A[], second: B[]) {
+  const output: Array<[A, B]> = []
+  for(let i = 0; i < first.length; i++) {
+    output.push([first[i], second[i]])
+  }
+  return output
+}
