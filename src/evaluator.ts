@@ -60,6 +60,7 @@ export default class Evaluator {
   private nth = 1
   private scope = new VariableManager()
   private userfuncs: TypedContainer<UserFunc> = {}
+  private funcache: TypedContainer<number> = {}
 
   constructor( 
     private readonly builtinFuncs: TypedContainer<BuiltinFunc>,
@@ -70,6 +71,11 @@ export default class Evaluator {
         this.scope.setConstant(key, val)
       }
     }
+  }
+
+  private cached(key: string, value: number) {
+    this.funcache[key] = value
+    return value
   }
 
   private evaluateLetStatement({funcname, params, body}: LetStatement) {
@@ -129,7 +135,7 @@ export default class Evaluator {
       }
 
       if(!matched) continue
-      
+
       this.scope.enterScope(funcscope)
       const result = this.evaluateExpression(clause)
       this.scope.leaveScope()
@@ -147,20 +153,24 @@ export default class Evaluator {
   private callFunction({funcname, args}: FunctionCall): number {
     const valargs = args.map(arg => this.evaluateExpression(arg))
 
+    const cachekey = `${funcname}(${valargs.map(String).join(',')})`
+    if(this.funcache[cachekey]) return this.funcache[cachekey]
+
     if(this.builtinFuncs[funcname]) {
       const func = this.builtinFuncs[funcname]
       if(func.length !== valargs.length) {
         throw new ShortError(`
-          function ${funcname}
+          builtin function ${funcname}
           expected ${func.length} number of arguments,
           but got ${valargs.length}
         `)
       }
-      return func(...valargs)
+      return this.cached(cachekey, func(...valargs))
     }
 
     if(this.userfuncs[funcname]) {
-      return this.callUserfunc(funcname, valargs)
+      const result = this.callUserfunc(funcname, valargs)
+      return this.cached(cachekey, result)
     }
 
     throw new Error(`undefined function ${funcname}!`)
