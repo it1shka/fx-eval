@@ -79,6 +79,14 @@ export default class Evaluator {
   }
 
   private evaluateLetStatement({funcname, params, body}: LetStatement) {
+    if(this.builtinFuncs[funcname]) {
+      throw new ShortError(`
+        failed to register ${funcname}: 
+        there is built-in function
+        with the same name!
+      `)
+    }
+
     if(!this.userfuncs[funcname]) this.userfuncs[funcname] = []
 
     const fcase = params.map(param => {
@@ -214,11 +222,6 @@ export default class Evaluator {
 export function DefaultEvaluator() {
 
   return new Evaluator({
-    'rand': () => Math.random(),
-    'randint': (min, max) => {
-      return min + Math.floor(Math.random() * (max - min))
-    },
-
     'min': (a, b) => Math.min(a, b),
     'max': (a, b) => Math.max(a, b),
 
