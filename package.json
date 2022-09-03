@@ -7,23 +7,24 @@
   ],
   "version": "1.0.0",
   "description": "Evaluator for fx calculus language",
-  "main": "index.js",
+
+  "main": "lib/evaluator.js",
+  "types": "lib/evaluator.d.ts",
   "files": [
     "lib/**/*"
   ],
+
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "runPackage": "tsc && node lib/index.js"
   },
+  
   "author": "it1shka",
   "license": "MIT",
+
   "devDependencies": {
-    "@types/node": "^18.7.14",
     "typescript": "^4.8.2"
   },
-  "dependencies": {
-    "chalk": "^4.0.0",
-    "readline": "^1.3.0"
-  }
+
+  "prepublish": "tsc"
 }

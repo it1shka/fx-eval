@@ -56,7 +56,7 @@ interface UserFuncCase {
   clause: Expression
 }
 
-export default class Evaluator {
+export class Evaluator {
   private nth = 1
   private scope = new VariableManager()
   private userfuncs: TypedContainer<UserFunc> = {}
