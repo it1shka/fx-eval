@@ -44,6 +44,12 @@ class VariableManager {
   }
 
   setConstant(constname: string, value: number) {
+    if(this.scopes[0][constname]) {
+      throw new ShortError(`
+        failed to set ${constname} to ${value}:
+        cannot redeclare constant value!
+      `)
+    }
     this.scopes[0][constname] = value
   }
 }
@@ -93,6 +99,39 @@ export class Evaluator {
       if(param.ntype === 'variable') return param.varname
       return this.evaluateExpression(param)
     })
+
+    // checking whether the case was already declared
+
+    const maybeAlreadyRegistered = this.userfuncs[funcname]
+      .map(({fcase}) => fcase)
+      .filter(ccase => ccase.length === fcase.length)
+
+    for(const ccase of maybeAlreadyRegistered) {
+
+      let clauseMatched = true
+      for(const [a, b] of zipped(fcase, ccase)) {
+        let argMatched = (() => {
+          if(typeof a !== typeof b) return false
+          if(typeof a === 'number' && a !== b) return false
+          return true
+        })()
+        if(!argMatched) {
+          clauseMatched = false
+          break
+        }
+      }
+
+      if(clauseMatched) {
+        throw new ShortError(`
+          failed to register
+          func ${funcname}(${fcase.map(String).join(', ')}): 
+          case was already declared!
+        `)
+      }
+
+    }
+
+    // as usual
 
     this.userfuncs[funcname].push({
       fcase, clause: body
